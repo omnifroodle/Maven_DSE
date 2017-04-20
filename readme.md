@@ -4,6 +4,7 @@ This demo shows the basics of interacting with data using the DSE Java driver.
 Included:
 * read data
 * insert data with bound statements
+* perform asynchronous queries
 * interact with Graph
 * interact with Solr
 
