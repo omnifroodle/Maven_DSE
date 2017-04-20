@@ -1,4 +1,4 @@
-# DSE Cassandra Java interaction demo
+# DSE Cassandra Java Driver Demo
 This demo shows the basics of interacting with data using the DSE Java driver.
 
 Included:
