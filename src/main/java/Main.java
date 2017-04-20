@@ -63,6 +63,7 @@ public class Main {
         }
     }
 
+    // From http://docs.datastax.com/en/developer/java-driver-dse/1.2/manual/statements/prepared/
     private static void executeBoundInsert(DseSession session, String first_name, String last_name) {
         System.out.println("Insert a row with a prepared statement");
 
@@ -84,7 +85,7 @@ public class Main {
         ListenableFuture<Session> session = cluster.connectAsync();
 
         // Use transform with an AsyncFunction to chain an async operation after another:
-        ListenableFuture<ResultSet> resultSet = Futures.transform(session,
+        ListenableFuture<ResultSet> resultSet = Futures.transformAsync(session,
                 new AsyncFunction<Session, ResultSet>() {
                     public ListenableFuture<ResultSet> apply(Session session) throws Exception {
                         return session.executeAsync("select release_version from system.local");
@@ -112,6 +113,7 @@ public class Main {
         });
     }
 
+    // From http://docs.datastax.com/en/developer/java-driver-dse/1.2/manual/graph/
     private static void executeGraphQuery(DseSession session) {
         session.executeGraph("system.graph('graph_demo').ifNotExists().create()");
 
