@@ -8,6 +8,11 @@ import com.datastax.driver.dse.graph.SimpleGraphStatement;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.*;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.Scanner;
+
 
 public class Main {
     public static void main(String[] args) {
@@ -23,16 +28,16 @@ public class Main {
             // Get some information about the cluster
             getVersion(session);
 
+            // Insert some rows into a column family
+            String[] last_names = getNames("last_names.csv");
+            String[] first_names = getNames("first_names.csv");
+            executeBoundInsert(session, first_names, last_names);
+
             // Get a row from a Column Family in the cluster
             executeSelect(session);
 
-            // Insert some rows into a column family
-            String first_name = "Nancey";
-            String last_name = "Sixt";
-            executeBoundInsert(session, first_name, last_name);
-
+            // Async Query
             executeAsyncQuery(cluster);
-
 
             // Additional DSE features
             // Graph
@@ -64,17 +69,20 @@ public class Main {
     }
 
     // From http://docs.datastax.com/en/developer/java-driver-dse/1.2/manual/statements/prepared/
-    private static void executeBoundInsert(DseSession session, String first_name, String last_name) {
-        System.out.println("Insert a row with a prepared statement");
+    private static void executeBoundInsert(DseSession session, String[] first_names, String[] last_names) {
+        System.out.println("Insert a rows with a prepared statement");
 
         PreparedStatement prepared = session.prepare("Insert into search.people (last_name, first_name) values (?, ?)");
 
-        BoundStatement bound = prepared.bind(last_name, first_name);
+        // insert a demo user we'll use later
+        BoundStatement bound = prepared.bind("Smith", "John");
         session.execute(bound);
 
-        // Now reverse the name, to demo prepared statements
-        bound = prepared.bind(first_name, last_name);
-        session.execute(bound);
+        // insert some other users with the same prepared statement
+        for (int i = 0; i < 10000; i++) {
+            BoundStatement loopbound = prepared.bind(randomString(last_names), randomString(first_names));
+            session.execute(loopbound);
+        }
     }
 
     // From http://docs.datastax.com/en/developer/java-driver-dse/1.2/manual/async/
@@ -127,18 +135,32 @@ public class Main {
 
     private static void executeSolrSearch(DseSession session) {
         System.out.println("Searching for a value with DSE Solr");
-        ResultSet rs = session.execute("SELECT count(*) FROM search.people WHERE solr_query = 'last_name:Jones'");
+        ResultSet rs = session.execute("SELECT count(*) FROM search.people WHERE solr_query = 'last_name:Smith'");
 
-        System.out.format("%d records for last_name:Jones", rs.one().getLong(0));
+        System.out.format("%d records for last_name Smith", rs.one().getLong(0));
     }
 
     private static void executeSolrPhoneticSearch(DseSession session) {
         //this requires a customer Solr Schema to perform phonetic encoding on the last_name field
         System.out.println("Searching for phonetic match with DSE Solr");
-        ResultSet rs = session.execute("SELECT count(*) FROM search.people WHERE solr_query = 'last_sounds:Jones'");
+        ResultSet rs = session.execute("SELECT count(*) FROM search.people WHERE solr_query = 'last_sounds:Smith'");
 
-        System.out.format("%d records for last_name that sound like Jones", rs.one().getLong(0));
+        System.out.format("%d records for last_name that sound like Smith", rs.one().getLong(0));
     }
 
+    private static String[] getNames(String file) {
+        Scanner sc = new Scanner(Main.class.getResourceAsStream("/" + file));
+        List<String> lines = new ArrayList<String>();
+        while (sc.hasNextLine()) {
+            lines.add(sc.nextLine());
+        }
 
+        String[] arr = lines.toArray(new String[0]);
+        return arr;
+    }
+
+    public static String randomString(String[] array) {
+        int rnd = new Random().nextInt(array.length);
+        return array[rnd];
+    }
 }
