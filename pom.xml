@@ -14,5 +14,10 @@
             <artifactId>dse-java-driver-core</artifactId>
             <version>1.2.3</version>
         </dependency>
+        <dependency>
+            <groupId>com.datastax.dse</groupId>
+            <artifactId>dse-java-driver-mapping</artifactId>
+            <version>1.2.3</version>
+        </dependency>
     </dependencies>
 </project>

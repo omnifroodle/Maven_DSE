@@ -1,3 +1,5 @@
+import com.datastax.driver.core.querybuilder.Insert;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.dse.DseCluster;
 import com.datastax.driver.dse.DseSession;
 import com.datastax.driver.core.*;
@@ -5,6 +7,8 @@ import com.datastax.driver.dse.graph.GraphResultSet;
 import com.datastax.driver.dse.graph.GraphStatement;
 import com.datastax.driver.dse.graph.SimpleGraphStatement;
 // for async access
+import com.datastax.driver.mapping.Mapper;
+import com.datastax.driver.mapping.MappingManager;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.*;
 
@@ -18,7 +22,7 @@ public class Main {
             cluster = DseCluster.builder()
                     .addContactPoint("127.0.0.1")
                     .build();
-            DseSession session = cluster.connect();
+            DseSession session = cluster.connect("search");
 
             // Get some information about the cluster
             getVersion(session);
@@ -27,12 +31,15 @@ public class Main {
             executeSelect(session);
 
             // Insert some rows into a column family
-            String first_name = "Nancey";
-            String last_name = "Sixt";
-            executeBoundInsert(session, first_name, last_name);
+            String firstName = "Nancey";
+            String lastName = "Sixt";
+            executeBoundInsert(session, firstName, lastName);
 
             executeAsyncQuery(cluster);
 
+            executeQueryBuilderStatement(session, firstName, lastName);
+
+            executeMapperQuery(session, firstName, lastName);
 
             // Additional DSE features
             // Graph
@@ -49,30 +56,31 @@ public class Main {
     }
 
     private static void getVersion(DseSession session) {
-        Row row = session.execute("select release_version from system.local").one(); // (3)
+        Row row = session.execute("SELECT release_version FROM system.local").one(); // (3)
         System.out.format("Cassandra Release Version: %s\n", row.getString("release_version")); // (4)
     }
 
     private static void executeSelect(DseSession session) {
         System.out.println("Finding a row with a simple statement");
 
-        ResultSet rs = session.execute("select * from search.people where last_name = 'Smith' and first_name = 'John';");
+        ResultSet rs = session.execute("SELECT * FROM search.people WHERE last_name = 'Smith' AND first_name = 'John';");
 
         for (Row person : rs) {
             System.out.format("%s, %s\n", person.getString("last_name"), person.getString("first_name"));
         }
     }
 
-    private static void executeBoundInsert(DseSession session, String first_name, String last_name) {
+    private static void executeBoundInsert(DseSession session, String firstName, String lastName) {
         System.out.println("Insert a row with a prepared statement");
 
-        PreparedStatement prepared = session.prepare("Insert into search.people (last_name, first_name) values (?, ?)");
+        // Note that this should only be run once per session. The statement remains prepared on the cluster side
+        PreparedStatement prepared = session.prepare("INSERT INTO search.people (last_name, first_name) VALUES (?, ?)");
 
-        BoundStatement bound = prepared.bind(last_name, first_name);
+        BoundStatement bound = prepared.bind(lastName, firstName);
         session.execute(bound);
 
         // Now reverse the name, to demo prepared statements
-        bound = prepared.bind(first_name, last_name);
+        bound = prepared.bind(firstName, lastName);
         session.execute(bound);
     }
 
@@ -84,10 +92,10 @@ public class Main {
         ListenableFuture<Session> session = cluster.connectAsync();
 
         // Use transform with an AsyncFunction to chain an async operation after another:
-        ListenableFuture<ResultSet> resultSet = Futures.transform(session,
+        ListenableFuture<ResultSet> resultSet = Futures.transformAsync(session,
                 new AsyncFunction<Session, ResultSet>() {
                     public ListenableFuture<ResultSet> apply(Session session) throws Exception {
-                        return session.executeAsync("select release_version from system.local");
+                        return session.executeAsync("SELECT release_version FROM system.local");
                     }
                 });
 
@@ -112,6 +120,23 @@ public class Main {
         });
     }
 
+    private static void executeQueryBuilderStatement(DseSession session, String firstName, String lastName) {
+        Insert qbStatement = QueryBuilder.insertInto("search", "people")
+            .value("first_name", firstName).value("last_name", lastName);
+        ResultSetFuture rsf = session.executeAsync(qbStatement);
+
+        // Wait for the query to succeed
+        rsf.getUninterruptibly();
+    }
+
+    private static void executeMapperQuery(DseSession session, String firstName, String lastName) {
+        MappingManager manager = new MappingManager(session);
+        Mapper<Person> mapper = manager.mapper(Person.class);
+
+        Person p = new Person(firstName, lastName);
+        mapper.save(p);
+    }
+
     private static void executeGraphQuery(DseSession session) {
         session.executeGraph("system.graph('graph_demo').ifNotExists().create()");
 
@@ -125,7 +150,7 @@ public class Main {
 
     private static void executeSolrSearch(DseSession session) {
         System.out.println("Searching for a value with DSE Solr");
-        ResultSet rs = session.execute("SELECT count(*) FROM search.people WHERE solr_query = 'last_name:Jones'");
+        ResultSet rs = session.execute("SELECT COUNT(*) FROM search.people WHERE solr_query = 'last_name:Jones'");
 
         System.out.format("%d records for last_name:Jones", rs.one().getLong(0));
     }
@@ -133,7 +158,7 @@ public class Main {
     private static void executeSolrPhoneticSearch(DseSession session) {
         //this requires a customer Solr Schema to perform phonetic encoding on the last_name field
         System.out.println("Searching for phonetic match with DSE Solr");
-        ResultSet rs = session.execute("SELECT count(*) FROM search.people WHERE solr_query = 'last_sounds:Jones'");
+        ResultSet rs = session.execute("SELECT COUNT(*) FROM search.people WHERE solr_query = 'last_sounds:Jones'");
 
         System.out.format("%d records for last_name that sound like Jones", rs.one().getLong(0));
     }
