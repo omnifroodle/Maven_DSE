@@ -9,7 +9,7 @@ public class Person {
   private String firstName;
 
   @PartitionKey(1)
-  @Column(name = "last_name");
+  @Column(name = "last_name")
   private String lastName;
 
   public Person(String firstName, String lastName) {

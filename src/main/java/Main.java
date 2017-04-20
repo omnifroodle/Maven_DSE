@@ -70,6 +70,7 @@ public class Main {
         }
     }
 
+    // From http://docs.datastax.com/en/developer/java-driver-dse/1.2/manual/statements/prepared/
     private static void executeBoundInsert(DseSession session, String firstName, String lastName) {
         System.out.println("Insert a row with a prepared statement");
 
@@ -137,6 +138,7 @@ public class Main {
         mapper.save(p);
     }
 
+    // From http://docs.datastax.com/en/developer/java-driver-dse/1.2/manual/graph/
     private static void executeGraphQuery(DseSession session) {
         session.executeGraph("system.graph('graph_demo').ifNotExists().create()");
 
