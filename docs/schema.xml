@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<schema name="autoSolrSchema" version="1.5">
+    <types>
+        <fieldType class="org.apache.solr.schema.StrField" name="StrField"/>
+        <fieldType name="soundex"
+            class="solr.TextField"
+            positionIncrementGap="100"
+            stored="false" 
+            multiValued="true">
+            <analyzer>
+                <tokenizer class="solr.WhitespaceTokenizerFactory"/>
+                <filter class="solr.PhoneticFilterFactory" encoder="Soundex" inject="false"/> 
+            </analyzer>
+        </fieldType>
+        <fieldType name="refinedsoundex"
+            class="solr.TextField"
+            positionIncrementGap="100"
+            stored="false" 
+            multiValued="true">
+            <analyzer>
+                <tokenizer class="solr.WhitespaceTokenizerFactory"/>
+                <filter class="solr.PhoneticFilterFactory" encoder="RefinedSoundex" inject="false"/> 
+            </analyzer>
+        </fieldType>
+        <fieldType name="dmphone"
+            class="solr.TextField"
+            positionIncrementGap="100"
+            stored="false" 
+            multiValued="true">
+            <analyzer>
+                <tokenizer class="solr.WhitespaceTokenizerFactory"/>
+                <filter class="solr.DoubleMetaphoneFilterFactory" inject="false"/> 
+            </analyzer>
+        </fieldType>
+    </types>
+    <fields>
+        <field indexed="true" multiValued="false" name="first_name" stored="true" type="StrField"/>
+        <field indexed="true" multiValued="false" name="last_name" stored="true" type="StrField" docValues="true"/>
+        <field indexed="true" multiValued="true" name="soundslike" stored="false" type="soundex"/>
+        <field indexed="true" multiValued="true" name="first_sounds" stored="false" type="soundex"/>
+        <field indexed="true" multiValued="true" name="last_sounds" stored="false" type="soundex"/>
+        <field indexed="true" multiValued="true" name="last_refined_soundex" stored="false" type="refinedsoundex"/>
+        <field indexed="true" multiValued="true" name="last_dm" stored="false" type="dmphone"/>
+    </fields>
+    <copyField source="*" dest="soundslike"></copyField>
+    <copyField source="first_name" dest="first_sounds"></copyField>
+    <copyField source="last_name" dest="last_sounds"></copyField>
+    <copyField source="last_name" dest="last_refined_soundex"></copyField>
+    <copyField source="last_name" dest="last_dm"></copyField>
+
+    <uniqueKey>(first_name,last_name)</uniqueKey>
+</schema>
