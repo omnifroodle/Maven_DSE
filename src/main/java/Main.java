@@ -19,13 +19,14 @@ import java.util.Scanner;
 
 
 public class Main {
+
     public static void main(String[] args) {
-
-
+        String clusterAddress = "127.0.0.1";
         DseCluster cluster = null;
         try {
+
             cluster = DseCluster.builder()
-                    .addContactPoint("127.0.0.1")
+                    .addContactPoint(clusterAddress)
                     .build();
             DseSession session = cluster.connect("search");
 
@@ -33,9 +34,9 @@ public class Main {
             getVersion(session);
 
             // Insert some rows into a column family
-            String[] last_names = getNames("last_names.csv");
-            String[] first_names = getNames("first_names.csv");
-            executeBoundInsert(session, first_names, last_names);
+            String[] lastNames = getNames("last_names.csv");
+            String[] firstNames = getNames("first_names.csv");
+            executeBoundInsert(session, firstNames, lastNames);
 
             // Get a row from a Column Family in the cluster
             executeSelect(session);
