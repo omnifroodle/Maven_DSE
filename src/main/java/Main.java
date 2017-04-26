@@ -28,7 +28,7 @@ public class Main {
             cluster = DseCluster.builder()
                     .addContactPoint(clusterAddress)
                     .build();
-            DseSession session = cluster.connect("search");
+            DseSession session = cluster.connect();
 
             // Get some information about the cluster
             getVersion(session);
